@@ -975,12 +975,19 @@ int Viewport::handleSystemEvent(void *event, void *data)
     // Ctrl+Alt. However the remote end might not be Windows, so we need
     // to merge those in to a single AltGr event. We detect this case
     // by seeing the two key events directly after each other with a very
-    // short time between them (<50ms) and supress the Ctrl event.
+    // short time between them (<50ms) and supress the Ctrl event. We also
+    // detect a second case where AltGr is emulated incorrectly, e.g. on Azure.
+    // In this case the extended flag may be missing but the two key events must
+    // have identical timestamp and the keyboard layout must report that no
+    // function keys are present.
+    int has_altgr = win32_has_altgr();
     if (self->altGrArmed) {
-      bool altPressed = isExtended &&
-                        (keyCode == 0x38) &&
+      bool altPressed = (keyCode == 0x38) &&
                         (vKey == VK_MENU) &&
-                        ((msg->time - self->altGrCtrlTime) < 50);
+                        ((isExtended &&
+                          ((msg->time - self->altGrCtrlTime) < 50)) ||
+                         ((has_altgr == 3) &&
+                          (msg->time == self->altGrCtrlTime)));
       self->resolveAltGrDetection(altPressed);
     }
 
@@ -1044,7 +1051,7 @@ int Viewport::handleSystemEvent(void *event, void *data)
       keySym = XK_Shift_R;
 
     // AltGr handling (see above)
-    if (win32_has_altgr()) {
+    if (has_altgr) {
       if ((keyCode == 0xb8) && (keySym == XK_Alt_R))
         keySym = XK_ISO_Level3_Shift;
 

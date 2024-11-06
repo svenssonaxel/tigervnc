@@ -423,5 +423,11 @@ int win32_has_altgr(void)
 
   current_layout = GetKeyboardLayout(0);
 
+  if (has_altgr == 1 && GetKeyboardType(2) == 0) {
+    // AltGr present but no function keys. This indicates that AltGr may be
+    // emulated without the extended flag, e.g. on Azure.
+    has_altgr = 3;
+  }
+
   return has_altgr;
 }
